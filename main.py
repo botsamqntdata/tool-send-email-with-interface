@@ -12,10 +12,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 import time
 import os
 
-def select_file():
-    file_path = filedialog.askopenfilename(filetypes=(("All files", "*"),))
+def select_files():
+    file_paths = filedialog.askopenfilenames(filetypes=(("All files", "*"),))
     file_entry.delete(0, tk.END)
-    file_entry.insert(0, file_path)
+    file_entry.insert(0, ', '.join(file_paths))
 
 def send_data():
     smtp_server = 'smtp.gmail.com'
@@ -23,7 +23,7 @@ def send_data():
     email = email_entry.get()
     password = password_entry.get()
     sheet_link = sheet_link_entry.get()
-    file_path = file_entry.get()
+    file_paths = file_entry.get()
     output_df = pd.DataFrame(columns=['name', 'email', 'sent time'])
     # fetch data from Google Sheet
     try:
@@ -60,19 +60,20 @@ def send_data():
                     formatted_lines.append(line)
             email_message = '<br>'.join(formatted_lines)
             signature = row['Signature']
-            email_message += "<br><br>" + signature
+            email_message += "<br>" + signature
 
             for recipient in email_to:
                 # Create email content
-                if file_path:
-                    with open(file_path, 'rb') as f:
-                        attachment = MIMEApplication(f.read(), _subtype='octet-stream')
-                        attachment.add_header('Content-Disposition', 'attachment', filename=os.path.basename(file_path))
-                        msg = MIMEMultipart()
-                        msg.attach(attachment)
-                        msg.attach(MIMEText(email_message, 'html'))
-                else:
-                    msg = MIMEText(email_message, 'html')
+                msg = MIMEMultipart()
+                if file_paths:
+                    for file_path in file_paths.split(', '):
+                        with open(file_path, 'rb') as f:
+                            attachment = MIMEApplication(f.read(), _subtype='octet-stream')
+                            attachment.add_header('Content-Disposition', 'attachment', filename=os.path.basename(file_path))
+                            msg.attach(attachment)
+                msg.attach(MIMEText(email_message, 'html'))
+                # else:
+                #     msg = MIMEText(email_message, 'html')
 
                 msg['To'] = eut.formataddr((row['Name'], recipient))
                 msg['From'] = eut.formataddr(('Henry Universes', email))
@@ -139,7 +140,7 @@ file_frame.pack(fill="x", padx=10, pady=10)
 file_entry = tk.Entry(file_frame, width=40)
 file_entry.pack(side="left", padx=10, pady=5)
 
-file_button = tk.Button(file_frame, text="Chọn tệp", command=select_file)
+file_button = tk.Button(file_frame, text="Chọn tệp", command=select_files)
 file_button.pack(side="left", padx=10, pady=5)
 
 # create the status label
